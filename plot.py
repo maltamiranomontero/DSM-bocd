@@ -4,7 +4,7 @@ from   matplotlib.colors import LogNorm
 import numpy as np
 
 def plot_posterior(T, data, R, cps=None):
-    fig, axes = plt.subplots(2, 1, figsize=(20,10))
+    fig, axes = plt.subplots(2, 1, figsize=(10,6))
 
     ax1, ax2 = axes
 
