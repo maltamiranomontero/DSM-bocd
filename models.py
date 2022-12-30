@@ -231,9 +231,9 @@ class DSMBase(ABC):
     
     def v(self, x):
         v1 = (self.grad_t(x).T@self.m(x)@self.m(x)@self.grad_b(x))
-        div_mm = np.asarray([[np.sum([[self.grad_m(x)[i,j,i]*self.m(x)[p,j] + self.grad_m(x)[p,j,i]*self.m(x)[i,j]  for i in range(self.d)]for j in range(self.d)])] for p in range(self.d)])
+        div_mm = (np.sum(self.grad_m(x)@self.m(x).T,axis=(0,2))+ np.sum(self.grad_m(x)@self.m(x).T,axis=(0,1))).reshape(self.d,1)
         v2 = self.grad_t(x).T@div_mm
-        v3 = np.asarray([[np.trace(self.m(x)@self.m(x).T@self.hess_t(x)[:,:,p])] for p in range(self.p)])
+        v3 = np.trace((self.m(x)@self.m(x).T@self.hess_t(x))).reshape(self.p,1)
         return v1+v2+v3
 
     def update_params(self, t, data):
