@@ -23,25 +23,6 @@ class TruncatedMVN:
     Botev, Z. I., (2016), The normal law under linear restrictions: simulation and estimation via minimax tilting,
     Journal of the Royal Statistical Society Series B, 79, issue 1, p. 125-148,
 
-    Example:
-        >>> d = 10  # dimensions
-        >>>
-        >>> # random mu and cov
-        >>> mu = np.random.rand(d)
-        >>> cov = 0.5 - np.random.rand(d ** 2).reshape((d, d))
-        >>> cov = np.triu(cov)
-        >>> cov += cov.T - np.diag(cov.diagonal())
-        >>> cov = np.dot(cov, cov)
-        >>>
-        >>> # constraints
-        >>> lb = np.zeros_like(mu) - 2
-        >>> ub = np.ones_like(mu) * np.inf
-        >>>
-        >>> # create truncated normal and sample from it
-        >>> n_samples = 100000
-        >>> samples = TruncatedMVN(mu, cov, lb, ub).sample(n_samples)
-
-    Reimplementation by Paul Brunzema
     """
 
     def __init__(self, mu, cov, lb, ub):
@@ -420,43 +401,3 @@ def lnPhi(x):
     # computes logarithm of  tail of Z~N(0,1) mitigating numerical roundoff errors
     out = -0.5 * x ** 2 - np.log(2) + np.log(special.erfcx(x / np.sqrt(2)) + EPS)  # divide by zeros error -> add eps
     return out
-
-
-if __name__ == '__main__':
-    import matplotlib.pyplot as plt
-    import scipy.stats as stats
-
-    d_test = 10
-    # random mu and cov
-    mu_test = np.random.rand(d_test)
-    cov_test = 0.5 - np.random.rand(d_test ** 2).reshape((d_test, d_test))
-    cov_test = np.triu(cov_test)
-    cov_test += cov_test.T - np.diag(cov_test.diagonal())
-    cov_test = np.dot(cov_test, cov_test)
-
-    # constraints
-    lb_test = np.zeros_like(mu_test) - 1.
-    ub_test = np.ones_like(mu_test) * np.inf
-
-    # create truncated normal and sample from it
-    n_samples_test = 100000
-    samples_test = TruncatedMVN(mu_test, cov_test, lb_test, ub_test).sample(n_samples_test)
-
-    idx_test = 1
-    fig, ax1 = plt.subplots()
-
-    ax2 = ax1.twinx()
-    x_test = np.linspace(-2, 4, 100)
-    ax1.plot(x_test, stats.norm.pdf(x_test, mu_test[idx_test], cov_test[idx_test, idx_test]),
-             'b--', label='Normal Distribution')
-    ax1.set_ylim(bottom=0)
-    ax2.hist(samples_test[idx_test, :], 100, color="k", histtype="step",
-             label=f'Truncated Normal Distribution, lb={lb_test[0]}, ub={ub_test[0]}')
-    ax1.set_xlim([-2, 4])
-    ax1.set_yticks([])
-    ax2.set_yticks([])
-    fig.legend(loc=9, frameon=False)
-    plt.show()
-    plt.close()
-
-    print('Done!')
