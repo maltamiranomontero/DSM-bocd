@@ -12,9 +12,9 @@ class ConstantHazard(Hazard):
     def __call__(self, r):
         """
         Args:
-          r: The length of the current run (np.ndarray or scalar)
+          r: The length of the current run 
         Returns:
-          p: Changepoint Probabilities(np.ndarray with shape = r.shape)
+          p: Changepoint Probabilities
         """
         if isinstance(r, np.ndarray):
             shape = r.shape
