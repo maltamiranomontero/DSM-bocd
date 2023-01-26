@@ -10,12 +10,6 @@ class ConstantHazard(Hazard):
         self._lambda = _lambda
 
     def __call__(self, r):
-        """
-        Args:
-          r: The length of the current run 
-        Returns:
-          p: Changepoint Probabilities
-        """
         if isinstance(r, np.ndarray):
             shape = r.shape
         else:

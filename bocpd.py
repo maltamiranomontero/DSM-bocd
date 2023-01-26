@@ -2,6 +2,15 @@ import numpy as np
 from scipy.special import logsumexp
 
 def bocpd(data, hazard, model, K = 50, verbose = False):
+    """
+    Args:
+        data: (shape: T x d vector)
+        hazard: Changepoint prior 
+        model:
+        K: Number of run-lengths that we keep.
+    Returns:
+        R: run-length distribution (shape: T x T vector)
+    """       
 
     T = len(data)
     log_R = -np.inf * np.ones((T + 1, T + 1))
@@ -39,7 +48,6 @@ def bocpd(data, hazard, model, K = 50, verbose = False):
 
         log_R[t, :t+1]  = new_log_joint
         log_R[t, :t+1] -= logsumexp(new_log_joint)
-
 
         # 8. Update sufficient statistics.
         model.update_params(t, data)
