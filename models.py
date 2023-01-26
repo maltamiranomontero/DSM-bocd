@@ -29,8 +29,7 @@ class GaussianUnknownMean:
         return stats.norm(post_means, post_stds).logpdf(x)
     
     def update_params(self, t, data):
-        """Upon observing a new datum x at time t, update all run length 
-        hypotheses.
+        """Upon observing a new datum x at time t, update all run length hypotheses.
         """
         x = data[t-1] 
         new_prec_params  = self.prec_params + (1/self.varx)
@@ -328,12 +327,10 @@ class DSMBase(ABC):
         return v1+v2+v3
 
     def update_params(self, t, data):
-         """Upon observing a new datum x at time t, update all run length 
+        """Upon observing a new datum x at time t, update all run length
         hypotheses.
         """
-
-        x = data[t-1] 
-
+        x = data[t-1]
         new_SigmaInv  = self.SigmaInv + 2*self.omega*self.A(x)
         new_Sigma = np.asarray([np.linalg.inv(new_SigmaInv[i]) for i in range(t)], dtype='float')
         new_mu  = new_Sigma@(self.SigmaInv@self.mu-2*self.omega*self.v(x))
