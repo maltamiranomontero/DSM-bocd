@@ -1,5 +1,5 @@
 import numpy as np
-from scipy.optimize import minimize
+from abc import ABC, abstractmethod
 
 import jax
 import jax.numpy as jnp

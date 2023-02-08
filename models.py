@@ -6,7 +6,6 @@ from utils.truncated_mvn_sampler import TruncatedMVN
 
 ###### Standard Bayes models ######
 class GaussianUnknownMean:
-    
     def __init__(self, mean0, var0, varx):
         """Initialize model, for standard Bayes. 
         Prior: Normal
@@ -45,18 +44,66 @@ class GaussianUnknownMean:
         """
         return 1./self.prec_params + self.varx
 
-class GaussianUnknownMeanVariance:
-    
+class MultivariateGaussianUnkownMean:
+    def __init__(self, mu0, Sigma0, Cov, d):
+        self.d = d
+
+        self.mu0 = np.asarray([mu0])
+        self.mu = np.asarray([mu0])
+
+        self.Sigma0Inv =  np.asarray([np.linalg.inv(Sigma0)])
+        self.SigmaInv = np.asarray([np.linalg.inv(Sigma0)])
+
+        self.Sigma0 = np.asarray([Sigma0])
+        self.Sigma = np.asarray([Sigma0])
+
+        self.Cov = Cov
+        self.CovInv = np.linalg.inv(Cov)
+
+    def log_pred_prob(self, t, data, indices):
+        """Compute predictive probabilities \pi, i.e. the posterior predictive
+        for each run length hypothesis.
+        """
+        x = data[t-1]
+        log_pred_prob = np.empty(len(indices))
+        for k, i in enumerate(indices):
+            post_mean = self.mu[i].reshape(self.d)
+            post_cov  = self.Sigma[i] + self.Cov
+            log_pred_prob[k] = stats.multivariate_normal.logpdf(x=x, mean=post_mean, cov=post_cov)
+
+        return log_pred_prob
+
+    def update_params(self, t, data):
+        """Upon observing a new datum x at time t, update all run length
+        hypotheses.
+        """
+        x = data[t-1]
+        new_SigmaInv  = self.SigmaInv + self.CovInv
+        new_Sigma = np.asarray([np.linalg.inv(new_SigmaInv[i]) for i in range(t)], dtype='float')
+        new_mu  = new_Sigma@(self.SigmaInv@self.mu+self.CovInv@x.reshape((self.d,1)))
+
+        self.SigmaInv = np.concatenate((self.Sigma0Inv,new_SigmaInv))
+        self.Sigma = np.concatenate((self.Sigma0,new_Sigma))
+        self.mu = np.concatenate((self.mu0, new_mu))
+
+class Gaussian:
     def __init__(self, mu0, kappa0, alpha0, omega0):
         """Initialize model, for standard Bayes. 
         Prior: Normal-inverse gamma
         Likelihood: Normal
         Predictive posterior: t-student
         """
-        self.alpha = self.alpha0 = np.array([alpha0])
-        self.omega = self.omega0 = np.array([omega0])
-        self.kappa = self.kappa0 = np.array([kappa0])
-        self.mu = self.mu0 = np.array([mu0])
+        self.alpha = np.array([alpha0])
+        self.alpha0 = np.array([alpha0])
+
+        self.omega = np.array([omega0])
+        self.omega0 = np.array([omega0])
+
+        self.kappa = np.array([kappa0])
+        self.kappa0 = np.array([kappa0])
+
+        self.mu = np.array([mu0])
+        self.mu0 = np.array([mu0])
     
     def log_pred_prob(self, t, data, indices):
         """Compute predictive probabilities \pi, i.e. the posterior predictive
@@ -170,7 +217,6 @@ class MultivariateGaussian:
 ###### DSM Bayes modes ######
 
 class SMGaussianUnknownMean:
-    
     def __init__(self, data, grad_r, lap_t, grad_b, omega, mean0, var0, varx):
         """Initialize model.
         """
@@ -221,7 +267,6 @@ class SMGaussianUnknownMean:
         return 1/self.prec_params + self.varx
 
 class DSMGaussianUnknownMean:
-    
     def __init__(self, data, m, grad_m, grad_r, hess_r, grad_b, omega, mean0, var0, varx, p=1, d=1):
         """Initialize model, for DSM Bayes. 
         Prior: Normal
@@ -284,7 +329,7 @@ class DSMBase(ABC):
     """
     Abstract class for DSM-Bayes model.
     """
-    def __init__(self, data, m, grad_m, grad_r, hess_r, grad_b, omega, mu0, Sigma0, d, p):
+    def __init__(self, data, m, grad_m, omega, mu0, Sigma0, d, p):
         """
         Initialize model.
         """
@@ -295,9 +340,6 @@ class DSMBase(ABC):
         
         self.m = m
         self.grad_m = grad_m
-        self.grad_r = grad_r
-        self.hess_r = hess_r
-        self.grad_b = grad_b
 
         self.omega = omega
 
@@ -309,6 +351,18 @@ class DSMBase(ABC):
 
         self.Sigma0 = np.asarray([Sigma0])
         self.Sigma = np.asarray([Sigma0])
+
+    @abstractmethod
+    def grad_r(self,x):
+        raise NotImplementedError("subclasses should implement this!")
+
+    @abstractmethod
+    def hess_r(self,x):
+        raise NotImplementedError("subclasses should implement this!")
+
+    @abstractmethod
+    def grad_b(self,x):
+        raise NotImplementedError("subclasses should implement this!")
 
     def A(self, x):
         """
@@ -347,12 +401,27 @@ class DSMBase(ABC):
         raise NotImplementedError("subclasses should implement this!") 
 
 class DSMExponentialGaussian(DSMBase):
-    def __init__(self, data, m, grad_m, grad_r, hess_r, grad_b, omega, mu0, Sigma0, b=20):
-        super().__init__(data, m, grad_m, grad_r, hess_r, grad_b, omega, mu0, Sigma0, d=2, p=3)
+    def __init__(self, data, m, grad_m, omega, mu0, Sigma0, b=20):
+        super().__init__(data, m, grad_m, omega, mu0, Sigma0, d=2, p=3)
         self.b = b # Number of samples to approximate predictive posterior.
 
+    def grad_r(self,x):
+        grad_t1 = np.zeros((1,3))
+        grad_t1[:,0] = -1
+        grad_t2 = np.zeros((1,3))
+        grad_t2[:,1] = 1
+        grad_t2[:,2] = -x[1]
+        return np.concatenate((grad_t1,grad_t2),axis=0)
+
+    def hess_r(self,x):
+        hess_t = np.zeros((2,2,3))
+        hess_t[1,1,2]=-1
+        return hess_t
+
+    def grad_b(self,x):
+        return np.asarray([[0],[0]])
+
     def log_pred_prob(self, t, data, indices):
-        
         x = data[t-1]
         log_pred_prob = np.zeros(len(indices))
         lb = np.asarray([0, -np.inf, 0])
@@ -368,14 +437,23 @@ class DSMExponentialGaussian(DSMBase):
         return log_pred_prob
 
 class DSMGaussian(DSMBase):
-    def __init__(self, data, m, grad_m, grad_r, hess_r, grad_b, omega, mu0, Sigma0, b=20):
-        super().__init__(data, m, grad_m, grad_r, hess_r, grad_b, omega, mu0, Sigma0, d=1, p=2)
+    def __init__(self, data, m, grad_m, omega, mu0, Sigma0, b=20):
+        super().__init__(data, m, grad_m, omega, mu0, Sigma0, d=1, p=2)
         self.b = b # Number of samples to approximate predictive posterior.
         """Initialize model, for DSM Bayes. 
         Prior: Squared exponential
         Likelihood: Normal
         Predictive posterior: Approximated by sampling.
         """
+
+    def grad_r(self,x):
+        return np.asarray([[1,-x]],dtype='float')
+
+    def hess_r(self,x):
+        return np.asarray([[[0,-1]]])
+
+    def grad_b(self,x):
+        return np.asarray([[0]])
 
 
     def log_pred_prob(self, t, data, indices):
@@ -394,14 +472,23 @@ class DSMGaussian(DSMBase):
         return log_pred_prob
 
 class DSMGamma(DSMBase):
-    def __init__(self, data, m, grad_m, grad_r, hess_r, grad_b, omega, mu0, Sigma0, b=20):
-        super().__init__(data, m, grad_m, grad_r, hess_r, grad_b, omega, mu0, Sigma0, d=1, p=2)
+    def __init__(self, data, m, grad_m, omega, mu0, Sigma0, b=20):
+        super().__init__(data, m, grad_m, omega, mu0, Sigma0, d=1, p=2)
         self.b = b # Number of samples to approximate predictive posterior.
         """Initialize model, for DSM Bayes. 
         Prior: Squared exponential
         Likelihood: Gamma
         Predictive posterior: Approximated by sampling.
         """
+
+    def grad_r(self,x):
+        return np.asarray([[1/x,-1]],dtype='float')
+
+    def hess_r(self,x):
+        return np.asarray([[[-1/(x**2),0]]],dtype='float')
+
+    def grad_b(self,x):
+        return np.asarray([[0]])
 
     def log_pred_prob(self, t, data, indices):
         """Compute predictive probabilities \pi, i.e. the posterior predictive
@@ -418,10 +505,26 @@ class DSMGamma(DSMBase):
             log_pred_prob[k] = np.log(np.average(stats.gamma(a = eta1+1, scale=1/eta2).pdf(x[0])))
         return log_pred_prob
 
-class DSM2DGaussian(DSMBase):
-    def __init__(self, data, m, grad_m, grad_r, hess_r, grad_b, omega, mu0, Sigma0, b=20):
-        super().__init__(data, m, grad_m, grad_r, hess_r, grad_b, omega, mu0, Sigma0, d=2, p=4)
+class DSMMultivariateGaussian(DSMBase):
+    def __init__(self, data, m, grad_m, omega, mu0, Sigma0, d, b=20):
+        super().__init__(data, m, grad_m, omega, mu0, Sigma0, d=d, p=2*d)
         self.b = b # Number of samples to approximate predictive posterior.
+
+    def grad_r(self,x):
+        grad_r = np.zeros((self.d,self.p))
+        for i in range(self.d):
+            grad_r[i,2*i] = 1
+            grad_r[i,2*i+1] = -x[i]
+        return grad_r
+
+    def hess_r(self,x):
+        hess_r = np.zeros((self.d,self.d,self.p))
+        for i in range(self.d):
+            hess_r[i,i,2*i+1] = -1
+        return hess_r
+
+    def grad_b(self,x):
+        return np.zeros((self.d,1))
 
     def log_pred_prob(self, t, data, indices):
         """Compute predictive probabilities \pi, i.e. the posterior predictive
@@ -429,15 +532,46 @@ class DSM2DGaussian(DSMBase):
         """
         x = data[t-1]
         log_pred_prob = np.zeros(len(indices))
-        lb = np.asarray([-np.inf, 0,-np.inf, 0])
+        lb = np.zeros(self.p)
+        for i in range(self.d):
+            lb[2*i]=-np.inf
         ub = np.ones(self.p) * np.inf
         for k, i in enumerate(indices):
             eta = TruncatedMVN(self.mu[i].reshape(self.p),self.Sigma[i], lb, ub).sample(self.b)
-            eta1 = eta[0,:]
-            eta2 = eta[1,:]
-            sample_norm1 = stats.expon(loc=eta1/eta2,scale=np.sqrt(1/eta2)).pdf(x[0])
-            eta3 = eta[0,:]
-            eta4 = eta[1,:]
-            sample_norm2 = stats.norm(loc=eta3/eta4,scale=np.sqrt(1/eta4)).pdf(x[1])
-            log_pred_prob[k] = np.log(np.average(sample_norm1*sample_norm2))
+            samples = np.empty((self.d,self.b))
+            for j in range(self.d):
+                eta1 = eta[2*j,:]
+                eta2 = eta[2*j+1,:]
+                samples[j] = stats.norm(loc=eta1/eta2,scale=np.sqrt(1/eta2)).pdf(x[j])
+            log_pred_prob[k] = np.log(np.average(np.prod(samples,axis=0)))
+        return log_pred_prob
+
+class DSMMultivariateGaussianUnkownMean(DSMBase):
+    def __init__(self, data, m, grad_m, omega, mu0, Sigma0, Cov, d, b=20):
+        super().__init__(data, m, grad_m, omega, mu0, Sigma0, d=d, p=d)
+        self.b = b # Number of samples to approximate predictive posterior.
+        self.Cov = Cov
+        self.CovInv = np.linalg.inv(Cov)
+
+    def grad_r(self,x):
+        return self.CovInv
+
+    def hess_r(self,x):
+        return np.zeros((self.d,self.d,self.d))
+
+    def grad_b(self,x):
+        x = x.reshape((self.d,1))
+        return -self.CovInv@x
+
+    def log_pred_prob(self, t, data, indices):
+        """Compute predictive probabilities \pi, i.e. the posterior predictive
+        for each run length hypothesis.
+        """
+        x = data[t-1]
+        log_pred_prob = np.empty(len(indices))
+        for k, i in enumerate(indices):
+            post_mean = self.mu[i].reshape(self.p)
+            post_cov  = self.Sigma[i] + self.Cov
+            log_pred_prob[k] = stats.multivariate_normal.logpdf(x=x, mean=post_mean, cov=post_cov)
+
         return log_pred_prob
