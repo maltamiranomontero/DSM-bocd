@@ -10,7 +10,7 @@ This repository contains all code and data needed to reproduce the results in th
 - The file `bocpd.py` contains the main function to run the algorithm.
 
 ## Requirements 
-- Python == 3.10.*
+- Python == 3.9.*
 - Numpy == 1.20.3
 - SciPy == 1.7.1
 - Jax == 0.4.1

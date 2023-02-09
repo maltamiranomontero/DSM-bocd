@@ -1,3 +1,7 @@
+"""
+Author: brunzema
+"""
+
 import numpy as np
 import math
 from scipy import special
