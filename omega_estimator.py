@@ -10,17 +10,14 @@ from functools import partial
 dist = tfp.distributions
 
 class OmegaEstimatorGamma:
-    def __init__(self, data, m ,grad_m, grad_r, hess_r, grad_b, mu0, Sigma0, p=2, d=1):
+    def __init__(self, data, m, grad_m, mu0, Sigma0):
         self.data = data
-        self.p = p
-        self.d = d
+        self.p = 2
+        self.d = 1
         self.n = self.data.shape[0]
         ## DSM 
         self.m = m
         self.grad_m = grad_m
-        self.grad_r = grad_r
-        self.hess_r = hess_r
-        self.grad_b = grad_b
 
         self.mu0 = mu0
 
@@ -30,6 +27,16 @@ class OmegaEstimatorGamma:
 
         self.A = np.sum([self.Ax(x) for x in self.data],axis=0)/self.n
         self.v = 2*np.sum([self.vx(x) for x in self.data],axis=0)/self.n
+    
+    
+    def grad_r(self,x):
+        return np.asarray([[1/x,-1]],dtype='float')
+
+    def hess_r(self,x):
+        return np.asarray([[[-1/(x**2),0]]],dtype='float')
+
+    def grad_b(self,x):
+        return np.asarray([[0]])
     
     def Ax(self, x):
         return self.grad_r(x).T@self.m(x)@self.m(x).T@self.grad_r(x)
@@ -97,17 +104,14 @@ class OmegaEstimatorGamma:
         return params, costs
 
 class OmegaEstimatorGaussian:
-    def __init__(self, data, m ,grad_m, grad_r, hess_r, grad_b, mu0, Sigma0, p=2, d=1):
+    def __init__(self, data, m ,grad_m, mu0, Sigma0):
         self.data = data
-        self.p = p
-        self.d = d
+        self.p = 2
+        self.d = 1
         self.n = self.data.shape[0]
         ## DSM 
         self.m = m
         self.grad_m = grad_m
-        self.grad_r = grad_r
-        self.hess_r = hess_r
-        self.grad_b = grad_b
 
         self.mu0 = mu0
 
@@ -117,6 +121,17 @@ class OmegaEstimatorGaussian:
 
         self.A = np.sum([self.Ax(x) for x in self.data],axis=0)/self.n
         self.v = 2*np.sum([self.vx(x) for x in self.data],axis=0)/self.n
+
+
+    def grad_r(self,x):
+        return np.asarray([[1,-x]],dtype='float')
+
+    def hess_r(self,x):
+        return np.asarray([[[0,-1]]])
+
+    def grad_b(self,x):
+        return np.asarray([[0]])
+
     
     def Ax(self, x):
         return self.grad_r(x).T@self.m(x)@self.m(x).T@self.grad_r(x)
