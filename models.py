@@ -235,14 +235,10 @@ class MultivariateGaussian:
 
 
 class SMGaussianUnknownMean:
-    def __init__(self, data, grad_r, lap_t, grad_b, omega, mean0, var0, varx):
+    def __init__(self, data, omega, mean0, var0, varx):
         """Initialize model.
         """
         self.data = data
-
-        self.grad_r = grad_r
-        self.lap_t = lap_t
-        self.grad_b = grad_b
         self.omega = omega
 
         self.mean0 = mean0
@@ -250,6 +246,15 @@ class SMGaussianUnknownMean:
         self.varx = varx
         self.mean_params = np.array([mean0])
         self.prec_params = np.array([1/var0])
+
+    def grad_r(self, x):
+        return np.eye(1)
+
+    def grad_b(self, x):
+        return -x
+
+    def lap_r(self, x):
+        return np.zeros(1)
 
     def log_pred_prob(self, t, data, indices):
         """Compute predictive probabilities pi, i.e. the posterior predictive
@@ -265,7 +270,7 @@ class SMGaussianUnknownMean:
 
     def v(self, x):
         v1 = self.grad_r(x).T@self.grad_b(x)
-        v2 = self.lap_t(x)
+        v2 = self.lap_r(x)
         return v1+v2
 
     def update_params(self, t, data):
@@ -287,22 +292,19 @@ class SMGaussianUnknownMean:
 
 
 class DSMGaussianUnknownMean:
-    def __init__(self, data, m, grad_m, grad_r, hess_r, grad_b, omega, mean0,
-                 var0, varx, p=1, d=1):
+    def __init__(self, data, m, grad_m, omega, mean0,
+                 var0, varx):
         """Initialize model, for DSM Bayes.
         Prior: Normal
         Likelihood: Normal
         Predictive posterior: Normal
         """
         self.data = data
-        self.p = p
-        self.d = d
+        self.p = 1
+        self.d = 1
 
         self.m = m
         self.grad_m = grad_m
-        self.grad_r = grad_r
-        self.hess_r = hess_r
-        self.grad_b = grad_b
         self.omega = omega
 
         self.mean0 = mean0
@@ -310,6 +312,15 @@ class DSMGaussianUnknownMean:
         self.varx = varx
         self.mean_params = np.array([mean0])
         self.prec_params = np.array([1/var0])
+
+    def grad_r(self, x):
+        return np.eye(1)/self.varx
+
+    def grad_b(self, x):
+        return -np.array([x])/self.varx
+
+    def hess_r(self, x):
+        return np.zeros([1, 1, 1])
 
     def log_pred_prob(self, t, data, indices):
         """Compute predictive probabilities pi, i.e. the posterior predictive
