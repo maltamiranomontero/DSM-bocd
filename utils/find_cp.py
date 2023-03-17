@@ -1,11 +1,12 @@
 import numpy as np
 
-def find_cp(R, lag = 20):
+
+def find_cp(R, lag=20):
     n = len(R)
     CPs = [0]
     last_CP = 0
     for i in range(n):
-        candidate = i-np.argmax(R[i,:])
+        candidate = i-np.argmax(R[i, :])
         if candidate > last_CP+lag:
             if (candidate not in CPs):
                 CPs.append(candidate)
@@ -14,6 +15,6 @@ def find_cp(R, lag = 20):
             try:
                 CPs.remove(last_CP)
                 last_CP = np.max(CPs)
-            except:
+            except Exception:
                 pass
     return CPs
