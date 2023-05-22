@@ -496,7 +496,7 @@ class DSMGaussian(DSMBase):
         """
 
     def grad_r(self, x):
-        return np.asarray([[1, -x]], dtype='float')
+        return np.asarray([[1, -x[0]]], dtype='float')
 
     def hess_r(self, x):
         return np.asarray([[[0, -1]]])
@@ -533,10 +533,10 @@ class DSMGamma(DSMBase):
         """
 
     def grad_r(self, x):
-        return np.asarray([[1/x, -1]], dtype='float')
+        return np.asarray([[1/x[0], -1]], dtype='float')
 
     def hess_r(self, x):
-        return np.asarray([[[-1/(x**2), 0]]], dtype='float')
+        return np.asarray([[[-1/(x[0]**2), 0]]], dtype='float')
 
     def grad_b(self, x):
         return np.asarray([[0]])

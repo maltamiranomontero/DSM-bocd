@@ -29,10 +29,10 @@ class OmegaEstimatorGamma:
         self.v = 2*np.sum([self.vx(x) for x in self.data], axis=0)/self.n
 
     def grad_r(self, x):
-        return np.asarray([[1/x, -1]], dtype='float')
+        return np.asarray([[1/x[0], -1]], dtype='float')
 
     def hess_r(self, x):
-        return np.asarray([[[-1/(x**2), 0]]], dtype='float')
+        return np.asarray([[[-1/(x[0]**2), 0]]], dtype='float')
 
     def grad_b(self, x):
         return np.asarray([[0]])
@@ -137,7 +137,7 @@ class OmegaEstimatorGaussian:
         self.v = 2*np.sum([self.vx(x) for x in self.data], axis=0)/self.n
 
     def grad_r(self, x):
-        return np.asarray([[1, -x]], dtype='float')
+        return np.asarray([[1, -x[0]]], dtype='float')
 
     def hess_r(self, x):
         return np.asarray([[[0, -1]]])
