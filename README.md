@@ -14,3 +14,6 @@ This repository contains all code and data needed to reproduce the results in th
 - Numpy == 1.20.3
 - SciPy == 1.7.1
 - Jax == 0.4.1
+
+## Citation
+M. Altamirano, F.-X. Briol, and J. Knoblauch, [“Robust and scalable Bayesian online changepoint detection”](https://proceedings.mlr.press/v202/altamirano23a.html), in Proceedings of the 40th International Conference on Machine Learning, PMLR, 2023, pp. 642–663.
